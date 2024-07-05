@@ -2,7 +2,7 @@ package app
 
 import (
 	"auth/config"
-	"auth/internal/domain/auth/delivery/grpc"
+	"auth/internal/domain/auth/delivery/grpc/server"
 	"context"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -14,7 +14,7 @@ func New() *fx.App {
 		fx.Options(
 			//repository.New(),
 			//usecase.New(),
-			grpc.New(),
+			server.New(),
 		),
 		fx.Provide(
 			context.Background,
