@@ -1,5 +1,7 @@
 package main
 
-func main() {
+import "auth/internal/app"
 
+func main() {
+	app.New().Run()
 }
