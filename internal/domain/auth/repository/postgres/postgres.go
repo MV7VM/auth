@@ -43,3 +43,25 @@ func (r *Repository) OnStop(_ context.Context) error {
 	r.DB.Close()
 	return nil
 }
+
+const queryGetUser = `
+	SELECT EXISTS (SELECT id
+               FROM users
+               WHERE login = $1 AND password = $2);
+`
+
+func (r *Repository) IsUserExist(log, pass string) (bool, error) {
+	return false, nil
+}
+
+const queryGetUserRole = ``
+
+func (r *Repository) GetUserRole(log, pas string) (string, error) {
+	return "", nil
+}
+
+const queryGetUserToken = ``
+
+func (r *Repository) GetUserToken(log, pas string) (string, error) {
+	return "", nil
+}

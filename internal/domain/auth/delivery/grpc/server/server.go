@@ -53,14 +53,22 @@ func (s *Server) OnStop(_ context.Context) error {
 	return nil
 }
 
-func GetUserToken(context.Context, *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
+func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
+	token, role, err := s.Usecase.GetUserToken(request.GetLogin(), request.GetPassword())
+	if err != nil {
+		return nil, err
+	}
+	return &protos.GetUserTokenResponse{
+		Token:  token,
+		Status: "OK",
+		Role:   role,
+	}, nil
+}
+
+func (s *Server) CreateUser(ctx context.Context, request *protos.CreateUserRequest) (*protos.CreateUserResponse, error) {
 
 }
 
-func CreateUser(context.Context, *protos.CreateUserRequest) (*protos.CreateUserResponse, error) {
-
-}
-
-func UpdateUserPassword(context.Context, *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
+func (s *Server) UpdateUserPassword(context.Context, *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
 
 }
