@@ -1,11 +1,14 @@
 package repository
 
-import "go.uber.org/fx"
+import (
+	"auth/internal/domain/auth/repository/postgres"
+	"go.uber.org/fx"
+)
 
 func New() fx.Option {
 	return fx.Module("repository",
 		fx.Provide(
-			postgres.New,
+			postgres.NewRepository,
 		),
 		fx.Invoke(
 			func(lc fx.Lifecycle, a *postgres.Repository) {

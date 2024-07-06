@@ -2,6 +2,7 @@ package server
 
 import (
 	"auth/config"
+	"auth/internal/domain/auth/usecase"
 	protos "auth/pkg/proto/gen/go"
 	"context"
 	"fmt"
@@ -12,17 +13,19 @@ import (
 )
 
 type Server struct {
-	logger *zap.Logger
-	cfg    *config.ConfigModel
-	RPC    *grpc.Server
+	logger  *zap.Logger
+	cfg     *config.ConfigModel
+	RPC     *grpc.Server
+	Usecase *usecase.Usecase
 	protos.UnimplementedAuthServer
 }
 
-func NewServer(logger *zap.Logger, cfg *config.ConfigModel) (*Server, error) {
+func NewServer(logger *zap.Logger, cfg *config.ConfigModel, uc *usecase.Usecase) (*Server, error) {
 	return &Server{
-		logger: logger,
-		cfg:    cfg,
-		RPC:    grpc.NewServer(),
+		logger:  logger,
+		cfg:     cfg,
+		RPC:     grpc.NewServer(),
+		Usecase: uc,
 	}, nil
 }
 
@@ -48,4 +51,16 @@ func (s *Server) OnStop(_ context.Context) error {
 	s.logger.Debug("stop grps")
 	s.RPC.GracefulStop()
 	return nil
+}
+
+func GetUserToken(context.Context, *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
+
+}
+
+func CreateUser(context.Context, *protos.CreateUserRequest) (*protos.CreateUserResponse, error) {
+
+}
+
+func UpdateUserPassword(context.Context, *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
+
 }

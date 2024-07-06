@@ -1,9 +1,12 @@
 package server
 
-import "go.uber.org/fx"
+import (
+	"go.uber.org/fx"
+	"go.uber.org/zap"
+)
 
 func New() fx.Option {
-	return fx.Module("NewValidatorClient",
+	return fx.Module("NewServer",
 		fx.Provide(
 			NewServer,
 		),
@@ -15,5 +18,8 @@ func New() fx.Option {
 				})
 			},
 		),
+		fx.Decorate(func(log *zap.Logger) *zap.Logger {
+			return log.Named("server")
+		}),
 	)
 }
