@@ -3,9 +3,9 @@ package config
 type ConfigModel struct {
 	Server   ServerConfig   `yaml:"Server"`
 	Postgres PostgresConfig `yaml:"Postgres"`
-	GRPC     struct {
-		ContentClient Client `yaml:"client"`
-	} `yaml:"grpc"`
+	//GRPC     struct {
+	//	ContentClient Client `yaml:"client"`
+	//} `yaml:"grpc"`
 }
 
 type Client struct {
