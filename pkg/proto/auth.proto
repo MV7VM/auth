@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package auth_proto.v1;
+
+service auth{
+  rpc GetUserToken(GetUserTokenRequest) returns(GetUserTokenResponse) {}
+  rpc CreateUser(CreateUserRequest) returns(CreateUserResponse) {}
+  rpc UpdateUserPassword(UpdateUserPasswordRequest) returns(UpdateUserPasswordResponse){}
+}
+
+message GetUserTokenRequest{
+  string login=1;
+  string password=2;
+}
+
+message GetUserTokenResponse{
+  string status = 1;
+  string token = 2;
+  string role=3;
+}
+
+message CreateUserRequest{
+  string mail=1;
+  string phone=2;
+}
+
+message CreateUserResponse{
+  string status=1;
+  uint64 user_id=2;
+}
+
+message UpdateUserPasswordRequest{
+  uint64 id = 1;
+  string password = 2;
+}
+
+message UpdateUserPasswordResponse{
+  string status = 1;
+}
