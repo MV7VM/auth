@@ -57,32 +57,44 @@ func (s *Server) OnStop(_ context.Context) error {
 }
 
 func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
-	token, role, err := s.Usecase.GetUserToken(ctx, convertToUserEntity("", request.GetLogin(), request.GetPassword(), 0))
+	token, role, err := s.Usecase.GetUserToken(
+		ctx, 
+		convertToUserEntity(
+			"",
+			request.GetLogin(),
+			nil,
+			0,
+			"",
+		),
+		request.GetPassword(),
+	)
 	if err != nil {
 		return nil, err
 	}
 	return &protos.GetUserTokenResponse{
 		Token:  token,
-		Status: statusOK,
 		Role:   role,
 	}, nil
 }
 
 func (s *Server) CreateUser(ctx context.Context, request *protos.CreateUserRequest) (*protos.CreateUserResponse, error) {
-	userID, err := s.Usecase.CreateUser(ctx, convertToUserEntity(request.GetMail(), request.GetPhone(), "", 0))
+	
+	userID, err := s.Usecase.CreateUser(
+		ctx, 
+		convertToUserEntity(request.GetMail(), request.GetPhone(), nil, 0, request.GetRole()), 
+		request.GetPassword(),
+	)
 	if err != nil {
 		s.logger.Error("fail to create user", zap.Error(err))
 		return nil, err
 	}
 	return &protos.CreateUserResponse{
 		UserId: userID,
-		Status: statusOK,
 	}, nil
 }
 
 func (s *Server) UpdateUserPassword(ctx context.Context, request *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
-	if err := s.Usecase.UpdateUserPassword(ctx,
-		convertToUserEntity("", "", request.GetPassword(), request.GetId())); err != nil {
+	if err := s.Usecase.UpdateUserPassword(ctx, convertToUserEntity("", "", nil, request.GetId(), ""), request.GetOldPassword(), request.GetNewPassword()); err != nil {
 		return nil, err
 	}
 	return &protos.UpdateUserPasswordResponse{
@@ -90,11 +102,15 @@ func (s *Server) UpdateUserPassword(ctx context.Context, request *protos.UpdateU
 	}, nil
 }
 
-func convertToUserEntity(mail, phone, password string, ID uint64) *entities.User {
+
+
+
+func convertToUserEntity(mail, phone string, passwordHash []byte, ID uint64, role string) *entities.User {
 	return &entities.User{
-		ID:       ID,
-		Mail:     mail,
-		Phone:    phone,
-		Password: password,
+		ID:           ID,
+		Mail:         mail,
+		Phone:        phone,
+		PasswordHash: passwordHash,
+		Role: 	      role,
 	}
 }
