@@ -29,36 +29,36 @@ func NewUsecase(logger *zap.Logger, Repo *postgres.Repository, cfg *config.Confi
 	}, nil
 }
 
-func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, password string) (string, string, error) {
+func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, password string) (string, error) {
 	if exist, err := uc.Repo.IsUserExist(ctx, user); err != nil || !exist {
-		return "", "", errors.New("user does not exist")
+		return "", errors.New("user does not exist")
 	}
 
 	err := uc.Repo.GetUser(ctx, user)
 	if err != nil {
 		uc.log.Error("fail to GetUser", zap.Error(err))
-		return "", "", err
+		return "", err
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(password)); err != nil {
 		uc.log.Error("Invalid Password", zap.Error(err))
-		return "", "", err
+		return "", err
 	}
 
 	if user.Token != "" { //если токен есть в бд то
-		return user.Token, user.Role, nil
+		return user.Token, nil
 	}
 
 	if err := uc.createUserToken(user); err != nil {
 		uc.log.Error("Invalid Password", zap.Error(err))
-		return "", "", errors.New("fail to generate user token:" + err.Error())
+		return "", errors.New("fail to generate user token:" + err.Error())
 	}
 
 	if err := uc.Repo.UpdateUserToken(ctx, user); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return user.Token, user.Role, nil
+	return user.Token, nil
 }
 
 func (uc *Usecase) CreateUser(ctx context.Context, user *entities.User, password string) (uint64, error) {
@@ -122,6 +122,7 @@ func (uc *Usecase) createUserToken(user *entities.User) error {
 	claims := token.Claims.(jwt.MapClaims)
 	claims["uid"] = user.ID
 	claims["email"] = user.Mail
+	claims["role"] = user.Role
 	claims["exp"] = time.Now().Add(time.Hour*10000).Unix()
 
 	tokenString, err := token.SignedString([]byte(uc.cfg.Secret))
