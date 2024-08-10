@@ -48,14 +48,46 @@ func (r *Repository) OnStop(_ context.Context) error {
 const queryGetUserID = `
 	SELECT EXISTS (SELECT id
                FROM users
-               WHERE (login = $1 or $1 = '') AND (password = $2 or $2 = '') and (id = $3 or $3 = 0))
+               WHERE login = $1);
 `
 
 func (r *Repository) IsUserExist(ctx context.Context, user *entities.User) (bool, error) {
 	var res bool
-	err := r.DB.QueryRow(ctx, queryGetUserID, user.Phone, user.Password, user.ID).Scan(&res)
+	err := r.DB.QueryRow(ctx, queryGetUserID, user.Phone).Scan(&res)
 	if err != nil {
 		r.log.Error("fail to check user exists", zap.Error(err))
+		return false, err
+	}
+	return res, nil
+}
+
+const queryCheckUserByID = `
+	SELECT EXISTS (SELECT id
+               FROM users
+               WHERE id = $1);
+`
+
+func (r *Repository) IsUserExistByID(ctx context.Context, user *entities.User) (bool, error) {
+	var res bool
+	err := r.DB.QueryRow(ctx, queryCheckUserByID, user.ID).Scan(&res)
+	if err != nil {
+		r.log.Error("fail to check user exists", zap.Error(err))
+		return false, err
+	}
+	return res, nil
+}
+
+const queryGetRoleID = `
+	SELECT EXISTS (SELECT id
+               FROM roles
+               WHERE (role = $1))
+`
+
+func (r *Repository) IsRoleExist(ctx context.Context, role string) (bool, error) {
+	var res bool
+	err := r.DB.QueryRow(ctx, queryGetRoleID, role).Scan(&res)
+	if err != nil {
+		r.log.Error("fail to check role exists", zap.Error(err))
 		return false, err
 	}
 	return res, nil
@@ -65,11 +97,11 @@ const queryGetUserRole = `select role
 from roles 
 where id = (select roleid 
             from users 
-            where login = $1 and password = $2)`
+            where login = $1 and password_hash = $2)`
 
-func (r *Repository) GetUserRole(ctx context.Context, login, pass string) (string, error) {
+func (r *Repository) GetUserRole(ctx context.Context, login string, passwordHash []byte) (string, error) {
 	var role string
-	err := r.DB.QueryRow(ctx, queryGetUserRole, login, pass).Scan(&role)
+	err := r.DB.QueryRow(ctx, queryGetUserRole, login, passwordHash).Scan(&role)
 	if err != nil {
 		r.log.Error("fail to get user role from DB", zap.Error(err))
 		return "", err
@@ -79,11 +111,11 @@ func (r *Repository) GetUserRole(ctx context.Context, login, pass string) (strin
 
 const queryGetUserToken = `SELECT COALESCE(token, '') AS token
 					FROM users
-					WHERE login = $1 and password = $2`
+					WHERE login = $1 and password_hash = $2`
 
-func (r *Repository) GetUserToken(ctx context.Context, login, pass string) (string, error) {
+func (r *Repository) GetUserToken(ctx context.Context, login string, passHash []byte) (string, error) {
 	var token string
-	err := r.DB.QueryRow(ctx, queryGetUserToken, login, pass).Scan(&token)
+	err := r.DB.QueryRow(ctx, queryGetUserToken, login, passHash).Scan(&token)
 	if err != nil {
 		r.log.Error("fail to get user")
 		return "", err
@@ -91,13 +123,13 @@ func (r *Repository) GetUserToken(ctx context.Context, login, pass string) (stri
 	return token, nil
 }
 
-const queryCreateUser = `insert into users (login, password, roleid, mail) 
+const queryCreateUser = `insert into users (login, password_hash, roleid, mail) 
 					values ($1, $2, (select id from roles where role = $3), $4)
 					returning id`
 
 func (r *Repository) CreateUser(ctx context.Context, user *entities.User) (uint64, error) {
 	var id uint64
-	err := r.DB.QueryRow(ctx, queryCreateUser, user.Phone, user.Password, user.Role, user.Mail).Scan(&id)
+	err := r.DB.QueryRow(ctx, queryCreateUser, user.Phone, user.PasswordHash, user.Role, user.Mail).Scan(&id)
 	if err != nil {
 		r.log.Error("fail to create client", zap.Error(err))
 		return 0, err
@@ -106,11 +138,11 @@ func (r *Repository) CreateUser(ctx context.Context, user *entities.User) (uint6
 }
 
 const queryUpdateUserPassword = `update users 
-									set password = $1
+									set password_hash = $1
 									where id = $2`
 
 func (r *Repository) UpdateUserPassword(ctx context.Context, user *entities.User) error {
-	_, err := r.DB.Exec(ctx, queryUpdateUserPassword, user.Password, user.ID)
+	_, err := r.DB.Exec(ctx, queryUpdateUserPassword, user.PasswordHash, user.ID)
 	if err != nil {
 		r.log.Error("fail to update user password", zap.Error(err))
 		return err
@@ -120,13 +152,85 @@ func (r *Repository) UpdateUserPassword(ctx context.Context, user *entities.User
 
 const queryUpdateUserToken = `update users
 								set token = $1
-								where login = $2 and password = $3`
+								where login = $2`
 
-func (r *Repository) UpdateUserToken(ctx context.Context, token string, user *entities.User) error {
-	_, err := r.DB.Exec(ctx, queryUpdateUserToken, token, user.Phone, user.Password)
+func (r *Repository) UpdateUserToken(ctx context.Context, user *entities.User) error {
+	_, err := r.DB.Exec(ctx, queryUpdateUserToken, user.Token, user.Phone)
 	if err != nil {
 		r.log.Error("fail to exec user token", zap.Error(err))
 		return err
 	}
+	return nil
+}
+
+const queryGetUser = `
+SELECT
+    users.id,
+    users.login,
+    users.password_hash,
+    COALESCE(users.token, '') AS token,
+    users.mail,
+    roles.role
+FROM
+    users
+INNER JOIN
+    roles ON users.roleID = roles.id
+WHERE
+	users.login = $1;
+`
+
+
+
+func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
+	var userID int
+	var login, token, mail, role string
+	var passwordHash []byte
+
+	err := r.DB.QueryRow(ctx, queryGetUser, user.Phone).Scan(&userID, &login, &passwordHash, &token, &mail, &role)
+	if err != nil {
+		r.log.Error("fail to select data from users: ", zap.Error(err))
+		return err
+	}
+	user.ID = uint64(userID)
+	user.Mail = mail
+	user.Phone = login
+	user.PasswordHash = passwordHash 
+	user.Role = role
+	user.Token = token
+	return nil
+}
+
+const queryGetUserByID = `
+SELECT
+    users.id,
+    users.login,
+    users.password_hash,
+    COALESCE(users.token, '') AS token,
+    users.mail,
+    roles.role
+FROM
+    users
+INNER JOIN
+    roles ON users.roleID = roles.id
+WHERE
+	users.id = $1;
+`
+
+func (r *Repository) GetUserByID(ctx context.Context, user *entities.User) error {
+	var userID int
+	var login, token, mail, role string
+	var passwordHash []byte
+
+	err := r.DB.QueryRow(ctx, queryGetUserByID, user.ID).Scan(&userID, &login, &passwordHash, &token, &mail, &role)
+	if err != nil {
+		r.log.Error("fail to select data from users: ", zap.Error(err))
+		return err
+	}
+	user.ID = uint64(userID)
+	user.Mail = mail
+	user.Phone = login
+	user.PasswordHash = passwordHash 
+	user.Role = role
+	user.Token = token
 	return nil
 }
