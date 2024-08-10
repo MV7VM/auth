@@ -6,7 +6,7 @@ create table roles(
 create table users(
     id bigserial primary key,
     login text,
-    password_hash blob, 
+    password_hash bytea, 
     token text,
     mail text,
     roleID int references roles(id)

@@ -57,7 +57,7 @@ func (s *Server) OnStop(_ context.Context) error {
 }
 
 func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
-	token, role, err := s.Usecase.GetUserToken(
+	token, err := s.Usecase.GetUserToken(
 		ctx, 
 		convertToUserEntity(
 			"",
@@ -73,7 +73,6 @@ func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenR
 	}
 	return &protos.GetUserTokenResponse{
 		Token:  token,
-		Role:   role,
 	}, nil
 }
 

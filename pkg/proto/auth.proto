@@ -14,8 +14,7 @@ message GetUserTokenRequest{
 }
 
 message GetUserTokenResponse{
-  string token = 2;
-  string role=3;
+  string token = 1;
 }
 
 message CreateUserRequest{
@@ -26,7 +25,7 @@ message CreateUserRequest{
 }
 
 message CreateUserResponse{
-  uint64 user_id=2;
+  uint64 user_id=1;
 }
 
 message UpdateUserPasswordRequest{
