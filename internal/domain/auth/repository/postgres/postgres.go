@@ -197,6 +197,7 @@ func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
 	user.PasswordHash = passwordHash 
 	user.Role = role
 	user.Token = token
+	fmt.Println(user.Token)
 	return nil
 }
 
@@ -233,4 +234,41 @@ func (r *Repository) GetUserByID(ctx context.Context, user *entities.User) error
 	user.Role = role
 	user.Token = token
 	return nil
+}
+
+const queryGetUsersByRole = `
+SELECT
+    users.id
+FROM
+    users
+INNER JOIN
+    roles ON users.roleID = roles.id
+WHERE
+    roles.role = $1;
+`
+func (r *Repository) GetUsersByRole(ctx context.Context, role string) ([]uint64, error) {
+	var users []uint64
+	rows, err := r.DB.Query(ctx, queryGetUsersByRole, role)
+	if err != nil {
+		r.log.Error("fail to select users.id by roles.role: ", zap.Error(err))
+		return nil, err	
+	}
+	for rows.Next() {
+		var userID uint64
+		err := rows.Scan(&userID)
+		if err != nil {
+			r.log.Error("fail to scan row", zap.Error(err))
+			return nil, err
+		}
+
+		users = append(users, userID)
+	}
+
+	if rows.Err() != nil {
+		r.log.Error("rows iteration error", zap.Error(rows.Err()))
+		return nil, rows.Err()
+	}
+
+	return users, nil
+
 }

@@ -1,12 +1,13 @@
 service_name: "validator"
 
 Postgres:
-  # host: "127.0.0.1"
-  host: "postgres"
+  host: "127.0.0.1"
+  # host: "postgres"
   # port: "6132"
   port: "5432"
   user: "postgres"
-  password: "password"
+  # password: "password"
+  password: "1888937vV"
   DBName: "users"
   sslMode: "allow"
 

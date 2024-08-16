@@ -6,6 +6,8 @@ service auth{
   rpc GetUserToken(GetUserTokenRequest) returns(GetUserTokenResponse) {}
   rpc CreateUser(CreateUserRequest) returns(CreateUserResponse) {}
   rpc UpdateUserPassword(UpdateUserPasswordRequest) returns(UpdateUserPasswordResponse){}
+  rpc CheckValidUserToken(CheckValidUserTokenRequest) returns(CheckValidUserTokenResponse){}
+  rpc GetAllByRole(GetAllByRoleRequest) returns(GetAllByRoleResponse) {}
 }
 
 message GetUserTokenRequest{
@@ -36,4 +38,21 @@ message UpdateUserPasswordRequest{
 
 message UpdateUserPasswordResponse{
   string status = 1;
+}
+
+message CheckValidUserTokenRequest{
+  string token = 1;
+}
+
+message CheckValidUserTokenResponse{
+  uint64 id = 1;
+  string role = 2;
+}
+
+message GetAllByRoleRequest{
+  string role = 1;
+}
+
+message GetAllByRoleResponse{
+  repeated uint64 id = 1;
 }

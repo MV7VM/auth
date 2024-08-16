@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	Auth_GetUserToken_FullMethodName       = "/auth_proto.v1.auth/GetUserToken"
-	Auth_CreateUser_FullMethodName         = "/auth_proto.v1.auth/CreateUser"
-	Auth_UpdateUserPassword_FullMethodName = "/auth_proto.v1.auth/UpdateUserPassword"
+	Auth_GetUserToken_FullMethodName        = "/auth_proto.v1.auth/GetUserToken"
+	Auth_CreateUser_FullMethodName          = "/auth_proto.v1.auth/CreateUser"
+	Auth_UpdateUserPassword_FullMethodName  = "/auth_proto.v1.auth/UpdateUserPassword"
+	Auth_CheckValidUserToken_FullMethodName = "/auth_proto.v1.auth/CheckValidUserToken"
+	Auth_GetAllByRole_FullMethodName        = "/auth_proto.v1.auth/GetAllByRole"
 )
 
 // AuthClient is the client API for Auth service.
@@ -31,6 +33,8 @@ type AuthClient interface {
 	GetUserToken(ctx context.Context, in *GetUserTokenRequest, opts ...grpc.CallOption) (*GetUserTokenResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	UpdateUserPassword(ctx context.Context, in *UpdateUserPasswordRequest, opts ...grpc.CallOption) (*UpdateUserPasswordResponse, error)
+	CheckValidUserToken(ctx context.Context, in *CheckValidUserTokenRequest, opts ...grpc.CallOption) (*CheckValidUserTokenResponse, error)
+	GetAllByRole(ctx context.Context, in *GetAllByRoleRequest, opts ...grpc.CallOption) (*GetAllByRoleResponse, error)
 }
 
 type authClient struct {
@@ -71,6 +75,26 @@ func (c *authClient) UpdateUserPassword(ctx context.Context, in *UpdateUserPassw
 	return out, nil
 }
 
+func (c *authClient) CheckValidUserToken(ctx context.Context, in *CheckValidUserTokenRequest, opts ...grpc.CallOption) (*CheckValidUserTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckValidUserTokenResponse)
+	err := c.cc.Invoke(ctx, Auth_CheckValidUserToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authClient) GetAllByRole(ctx context.Context, in *GetAllByRoleRequest, opts ...grpc.CallOption) (*GetAllByRoleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAllByRoleResponse)
+	err := c.cc.Invoke(ctx, Auth_GetAllByRole_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility
@@ -78,6 +102,8 @@ type AuthServer interface {
 	GetUserToken(context.Context, *GetUserTokenRequest) (*GetUserTokenResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	UpdateUserPassword(context.Context, *UpdateUserPasswordRequest) (*UpdateUserPasswordResponse, error)
+	CheckValidUserToken(context.Context, *CheckValidUserTokenRequest) (*CheckValidUserTokenResponse, error)
+	GetAllByRole(context.Context, *GetAllByRoleRequest) (*GetAllByRoleResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -93,6 +119,12 @@ func (UnimplementedAuthServer) CreateUser(context.Context, *CreateUserRequest) (
 }
 func (UnimplementedAuthServer) UpdateUserPassword(context.Context, *UpdateUserPasswordRequest) (*UpdateUserPasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserPassword not implemented")
+}
+func (UnimplementedAuthServer) CheckValidUserToken(context.Context, *CheckValidUserTokenRequest) (*CheckValidUserTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckValidUserToken not implemented")
+}
+func (UnimplementedAuthServer) GetAllByRole(context.Context, *GetAllByRoleRequest) (*GetAllByRoleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllByRole not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 
@@ -161,6 +193,42 @@ func _Auth_UpdateUserPassword_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_CheckValidUserToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckValidUserTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).CheckValidUserToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_CheckValidUserToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).CheckValidUserToken(ctx, req.(*CheckValidUserTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Auth_GetAllByRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAllByRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).GetAllByRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_GetAllByRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).GetAllByRole(ctx, req.(*GetAllByRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -179,6 +247,14 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateUserPassword",
 			Handler:    _Auth_UpdateUserPassword_Handler,
+		},
+		{
+			MethodName: "CheckValidUserToken",
+			Handler:    _Auth_CheckValidUserToken_Handler,
+		},
+		{
+			MethodName: "GetAllByRole",
+			Handler:    _Auth_GetAllByRole_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

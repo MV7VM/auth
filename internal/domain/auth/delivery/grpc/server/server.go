@@ -56,6 +56,42 @@ func (s *Server) OnStop(_ context.Context) error {
 	return nil
 }
 
+// func convertUsersToProto(days []entities.User) []*protos.Day {
+// 	Days := make([]*protos.Day, len(days))
+// 	for i, _ := range days {
+// 		Days[i] = &protos.Day{
+// 			Date:     days[i].Date,
+// 			Workouts: convertWorkoutsToProto(days[i].Workouts),
+// 		}
+// 	}
+// 	return Days
+// }
+
+func (s *Server) GetAllByRole(ctx context.Context, request *protos.GetAllByRoleRequest) (*protos.GetAllByRoleResponse, error) {
+	users, err := s.Usecase.GetAllByRole(ctx, request.GetRole())
+	if err != nil {
+		s.logger.Error("Fail to get users", zap.Error(err))
+		return nil, err
+	}
+	return &protos.GetAllByRoleResponse{
+		Id: users,
+	}, nil
+}
+
+func (s *Server) CheckValidUserToken(ctx context.Context, request *protos.CheckValidUserTokenRequest) (*protos.CheckValidUserTokenResponse, error) {
+ 	user := convertToUserEntity("", "", nil, 0, "", request.GetToken())
+	err := s.Usecase.CheckValidUserToken(ctx, user, request.GetToken())
+	if err != nil {
+		s.logger.Error("Token invalid", zap.Error(err))
+		return nil, err
+	}
+	
+	return &protos.CheckValidUserTokenResponse{
+		Id: user.ID,
+		Role: user.Role,
+	}, nil
+}
+
 func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenRequest) (*protos.GetUserTokenResponse, error) {
 	token, err := s.Usecase.GetUserToken(
 		ctx, 
@@ -64,6 +100,7 @@ func (s *Server) GetUserToken(ctx context.Context, request *protos.GetUserTokenR
 			request.GetLogin(),
 			nil,
 			0,
+			"", 
 			"",
 		),
 		request.GetPassword(),
@@ -80,7 +117,7 @@ func (s *Server) CreateUser(ctx context.Context, request *protos.CreateUserReque
 	
 	userID, err := s.Usecase.CreateUser(
 		ctx, 
-		convertToUserEntity(request.GetMail(), request.GetPhone(), nil, 0, request.GetRole()), 
+		convertToUserEntity(request.GetMail(), request.GetPhone(), nil, 0, request.GetRole(), ""), 
 		request.GetPassword(),
 	)
 	if err != nil {
@@ -93,7 +130,7 @@ func (s *Server) CreateUser(ctx context.Context, request *protos.CreateUserReque
 }
 
 func (s *Server) UpdateUserPassword(ctx context.Context, request *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
-	if err := s.Usecase.UpdateUserPassword(ctx, convertToUserEntity("", "", nil, request.GetId(), ""), request.GetOldPassword(), request.GetNewPassword()); err != nil {
+	if err := s.Usecase.UpdateUserPassword(ctx, convertToUserEntity("", "", nil, request.GetId(), "", ""), request.GetOldPassword(), request.GetNewPassword()); err != nil {
 		return nil, err
 	}
 	return &protos.UpdateUserPasswordResponse{
@@ -104,12 +141,13 @@ func (s *Server) UpdateUserPassword(ctx context.Context, request *protos.UpdateU
 
 
 
-func convertToUserEntity(mail, phone string, passwordHash []byte, ID uint64, role string) *entities.User {
+func convertToUserEntity(mail, phone string, passwordHash []byte, ID uint64, role, token string) *entities.User {
 	return &entities.User{
 		ID:           ID,
 		Mail:         mail,
 		Phone:        phone,
 		PasswordHash: passwordHash,
 		Role: 	      role,
+		Token: 		  token,
 	}
 }
