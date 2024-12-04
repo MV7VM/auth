@@ -5,7 +5,7 @@ import (
 	"auth/internal/domain/auth/entities"
 	"auth/internal/domain/auth/repository/postgres"
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -48,59 +48,12 @@ func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, passwo
 	return user.Token, nil
 }
 
-func (uc *Usecase) CreateUser(ctx context.Context, user *entities.User, password string) (uint64, error) {
-	if exist, err := uc.Repo.IsUserExist(ctx, user); exist || err != nil {
-		uc.log.Error("fail to create user: user exist", zap.Error(err))
-		return 0, errors.New("user exist")
-	}
-
-	if exist, err := uc.Repo.IsRoleExist(ctx, user.Role); !exist || err != nil {
-		uc.log.Error("fail to create user: role does not exist", zap.Error(err))
-		return 0, errors.New("role does not exist")
-	}
-	passwordHash, err := uc.encryptPassword(password)
-	if err != nil {
-		uc.log.Error("fail to create passwordHash", zap.Error(err))
-		return 0, err
-	}
-	user.PasswordHash = passwordHash
-
-	userID, err := uc.Repo.CreateUser(ctx, user)
-	if err != nil {
-		uc.log.Error("fail to insert user into DB", zap.Error(err))
-		return 0, err
-	}
-	return userID, nil
+func (uc *Usecase) GetTime() time.Time {
+	return time.Now()
 }
 
-func (uc *Usecase) UpdateUserPassword(ctx context.Context, user *entities.User, oldPassword, newPassword string) error {
-	if exist, err := uc.Repo.IsUserExistByID(ctx, user); err != nil || !exist {
-		return errors.New("user does not exist")
-	}
-
-	err := uc.Repo.GetUserByID(ctx, user)
-	if err != nil {
-		uc.log.Error("fail to GetUser", zap.Error(err))
-		return err
-	}
-
-	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(oldPassword)); err != nil {
-		uc.log.Error("Invalid Password", zap.Error(err))
-		return err
-	}
-
-	newPasswordHash, err := uc.encryptPassword(newPassword)
-	if err != nil {
-		uc.log.Error("fail to create passwordHash", zap.Error(err))
-		return err
-	}
-	user.PasswordHash = newPasswordHash
-	if err := uc.Repo.UpdateUserPassword(ctx, user); err != nil {
-		uc.log.Error("fail to update passwordHash", zap.Error(err))
-		return err
-	}
-
-	return nil
+func (uc *Usecase) Admin() string {
+	return fmt.Sprintf("By admin: time = %s", time.Now().UTC())
 }
 
 func (uc *Usecase) createUserToken(user *entities.User) error {

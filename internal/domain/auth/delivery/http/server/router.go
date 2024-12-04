@@ -5,10 +5,10 @@ func (s *Server) createController() {
 
 	publicGroup := commonGroup.Group("")
 
-	publicGroup.POST("auth/login", s.GetUserToken)
+	publicGroup.POST("/auth/login", s.GetUserToken)
 	//publicGroup.POST("auth/refresh")
 
-	authGroup := commonGroup.Group("") //todo middleware
-	authGroup.GET("get-time")
-	authGroup.GET("admin")
+	authGroup := commonGroup.Group("").Use(s.mdlware.JwtTokenCheck).Use(s.mdlware.RoleMiddleware) //todo middleware
+	authGroup.GET("/get-time", s.Time)
+	authGroup.GET("/admin", s.Amin)
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"auth/config"
+	"auth/internal/domain/auth/delivery/http/middleware"
 	"auth/internal/domain/auth/entities"
 	"auth/internal/domain/auth/usecase"
 	protos "auth/pkg/proto/gen/go"
@@ -9,7 +10,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"net"
 	"net/http"
 )
 
@@ -20,27 +20,23 @@ type Server struct {
 	cfg     *config.ConfigModel
 	serv    *gin.Engine
 	Usecase *usecase.Usecase
+	mdlware *middleware.Middleware
 }
 
-func NewServer(logger *zap.Logger, cfg *config.ConfigModel, uc *usecase.Usecase) (*Server, error) {
+func NewServer(logger *zap.Logger, cfg *config.ConfigModel, uc *usecase.Usecase, mdlware *middleware.Middleware) (*Server, error) {
 	return &Server{
 		logger:  logger,
 		cfg:     cfg,
 		serv:    gin.Default(),
 		Usecase: uc,
+		mdlware: mdlware,
 	}, nil
 }
 
 func (s *Server) OnStart(_ context.Context) error {
-	lis, err := net.Listen("tcp", s.cfg.Server.Host+":"+s.cfg.Server.Port)
-	if err != nil {
-		s.logger.Error("failed to listen: ", zap.Error(err))
-		return fmt.Errorf("failed to listen:  %w", err)
-	}
-
 	go func() {
 		s.logger.Debug("serv started")
-		if err = s.serv.RunListener(lis); err != nil {
+		if err := s.serv.Run(s.cfg.Server.Host + ":" + s.cfg.Server.Port); err != nil {
 			s.logger.Error("failed to serve: " + err.Error())
 		}
 		return
@@ -85,29 +81,12 @@ func (s *Server) GetUserToken(ctx *gin.Context) {
 	return
 }
 
-func (s *Server) CreateUser(ctx context.Context, request *protos.CreateUserRequest) (*protos.CreateUserResponse, error) {
-
-	userID, err := s.Usecase.CreateUser(
-		ctx,
-		convertToUserEntity(request.GetMail(), request.GetPhone(), nil, 0, request.GetRole()),
-		request.GetPassword(),
-	)
-	if err != nil {
-		s.logger.Error("fail to create user", zap.Error(err))
-		return nil, err
-	}
-	return &protos.CreateUserResponse{
-		UserId: userID,
-	}, nil
+func (s *Server) Time(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"time": s.Usecase.GetTime().String()})
 }
 
-func (s *Server) UpdateUserPassword(ctx context.Context, request *protos.UpdateUserPasswordRequest) (*protos.UpdateUserPasswordResponse, error) {
-	if err := s.Usecase.UpdateUserPassword(ctx, convertToUserEntity("", "", nil, request.GetId(), ""), request.GetOldPassword(), request.GetNewPassword()); err != nil {
-		return nil, err
-	}
-	return &protos.UpdateUserPasswordResponse{
-		Status: statusOK,
-	}, nil
+func (s *Server) Amin(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": s.Usecase.Admin()})
 }
 
 func convertToUserEntity(mail, phone string, passwordHash []byte, ID uint64, role string) *entities.User {

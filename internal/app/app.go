@@ -2,7 +2,8 @@ package app
 
 import (
 	"auth/config"
-	"auth/internal/domain/auth/delivery/grpc/server"
+	"auth/internal/domain/auth/delivery/http/middleware"
+	"auth/internal/domain/auth/delivery/http/server"
 	"auth/internal/domain/auth/repository"
 	"auth/internal/domain/auth/usecase"
 	"context"
@@ -16,12 +17,13 @@ func New() *fx.App {
 		fx.Options(
 			repository.New(),
 			usecase.New(),
+			middleware.New(),
 			server.New(),
 		),
 		fx.Provide(
 			context.Background,
 			config.NewConfig,
-			zap.NewProduction,
+			zap.NewDevelopment,
 		),
 		fx.WithLogger(
 			func(log *zap.Logger) fxevent.Logger {
