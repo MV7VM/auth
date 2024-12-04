@@ -34,6 +34,7 @@ func NewServer(logger *zap.Logger, cfg *config.ConfigModel, uc *usecase.Usecase,
 }
 
 func (s *Server) OnStart(_ context.Context) error {
+	s.createController()
 	go func() {
 		s.logger.Debug("serv started")
 		if err := s.serv.Run(s.cfg.Server.Host + ":" + s.cfg.Server.Port); err != nil {
