@@ -10,16 +10,19 @@ import (
 
 func (m *Middleware) JwtTokenCheck(c *gin.Context) {
 	if token := strings.Split(c.GetHeader("Authorization"), " "); len(token) == 2 {
-		JWT, err := m.parseToken(c, token[0])
+		JWT, err := m.parseToken(c, token[1])
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		if !JWT.Valid {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 	} else {
 		c.AbortWithStatus(http.StatusUnauthorized)
+		return
 	}
 
 	c.Next()
