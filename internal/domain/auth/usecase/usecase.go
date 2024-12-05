@@ -2,10 +2,10 @@ package usecase
 
 import (
 	"auth/config"
+	"auth/internal/domain/auth/common"
 	"auth/internal/domain/auth/entities"
 	"auth/internal/domain/auth/repository/postgres"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -34,7 +34,13 @@ func NewUsecase(logger *zap.Logger, Repo *postgres.Repository, cfg *config.Confi
 }
 
 func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, password string) (string, error) {
-	if uc.isAdmin(ctx, user, password) {
+	ok, err := uc.isAdmin(ctx, user, password)
+	if err != nil {
+		uc.log.Error("failed to check admin", zap.Error(err))
+		return "", err
+	}
+
+	if ok {
 		user.Role = adminRole
 	} else {
 		err := uc.client(ctx, user, password)
@@ -44,7 +50,7 @@ func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, passwo
 		user.Role = clientRole
 	}
 
-	err := uc.createUserToken(user)
+	err = uc.createUserToken(user)
 	if err != nil {
 		uc.log.Error("failed to create user token", zap.Error(err))
 		return "", err
@@ -61,34 +67,34 @@ func (uc *Usecase) Admin() string {
 	return fmt.Sprintf("By admin: time = %s", time.Now().UTC())
 }
 
-func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password string) bool {
+func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password string) (bool, error) {
 	if user.Phone == adminRole {
 		exist, err := uc.Repo.IsUserExist(ctx, user)
 		if err != nil {
 			uc.log.Error("failed to get user exist", zap.Error(err))
-			return false
+			return false, err
 		}
 
 		if exist {
 			err = uc.Repo.GetUser(ctx, user)
 			if err != nil {
-				return false
+				return false, err
 			}
-			return user.Role == adminRole && password == string(user.PasswordHash)
+			return user.Role == adminRole && password == string(user.PasswordHash), common.UserPasswordError
 		} else {
 			user.Role = adminRole
 			user.PasswordHash = []byte(password)
 			userID, err := uc.Repo.CreateUser(ctx, user)
 			if err != nil {
-				return false
+				return false, err
 			}
 
 			user.ID = userID
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 func (uc *Usecase) client(ctx context.Context, user *entities.User, password string) error {
@@ -108,16 +114,16 @@ func (uc *Usecase) client(ctx context.Context, user *entities.User, password str
 		if string(user.PasswordHash) == password {
 			return nil
 		} else {
-			return errors.New("unauthorized")
+			return common.UserPasswordError
 		}
 	} else {
-		user.Role = clientRole
-		user.PasswordHash = []byte(password)
-		user.ID, err = uc.Repo.CreateUser(ctx, user)
-		if err != nil {
-			uc.log.Error("failed to create user", zap.Error(err))
-			return err
-		}
+		//user.Role = clientRole
+		//user.PasswordHash = []byte(password)
+		//user.ID, err = uc.Repo.CreateUser(ctx, user)
+		//if err != nil {
+		//uc.log.Error("failed to create user", zap.Error(err))
+		return common.UncreatedUserError
+		//}
 	}
 
 	return nil
