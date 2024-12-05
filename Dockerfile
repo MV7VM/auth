@@ -1,7 +1,7 @@
 FROM golang:1.22.4-alpine as builder
 
 ENV APP_HOME="/app" \
-    APP_MAIN="/cmd/main.go" \
+    APP_MAIN="cmd/main.go" \
     CGO_ENABLED=0 \
     GO111MODULE="on" 
 

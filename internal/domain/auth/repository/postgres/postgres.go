@@ -45,6 +45,34 @@ func (r *Repository) OnStop(_ context.Context) error {
 	return nil
 }
 
+const qGetUserRoles = `
+select role, grade from roles`
+
+func (r *Repository) GetUserRoles(ctx context.Context) map[string]int {
+	rows, err := r.DB.Query(ctx, qGetUserRoles)
+	if err != nil {
+		return nil
+	}
+
+	Roles := make(map[string]int)
+
+	for rows.Next() {
+		var (
+			grade int
+			role  string
+		)
+
+		err := rows.Scan(&role, &grade)
+		if err != nil {
+			return nil
+		}
+
+		Roles[role] = grade
+	}
+
+	return Roles
+}
+
 const queryGetUserID = `
 	SELECT EXISTS (SELECT id
                FROM users
@@ -179,8 +207,6 @@ WHERE
 	users.login = $1;
 `
 
-
-
 func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
 	var userID int
 	var login, token, mail, role string
@@ -194,7 +220,7 @@ func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
 	user.ID = uint64(userID)
 	user.Mail = mail
 	user.Phone = login
-	user.PasswordHash = passwordHash 
+	user.PasswordHash = passwordHash
 	user.Role = role
 	user.Token = token
 	return nil
@@ -229,7 +255,7 @@ func (r *Repository) GetUserByID(ctx context.Context, user *entities.User) error
 	user.ID = uint64(userID)
 	user.Mail = mail
 	user.Phone = login
-	user.PasswordHash = passwordHash 
+	user.PasswordHash = passwordHash
 	user.Role = role
 	user.Token = token
 	return nil

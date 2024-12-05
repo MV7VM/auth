@@ -7,7 +7,7 @@ Postgres:
   port: "5432"
   user: "postgres"
   password: "password"
-  DBName: "users"
+  DBName: "postgres"
   sslMode: "allow"
 
 Server: #http
