@@ -1,6 +1,8 @@
 package server
 
 func (s *Server) createController() {
+	s.serv.Use(s.mdlware.CORSMiddleware)
+
 	commonGroup := s.serv.Group("/api")
 
 	publicGroup := commonGroup.Group("")
