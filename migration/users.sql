@@ -1,13 +1,12 @@
 create table roles(
     id serial primary key,
-    role text
+    role text,
+    grade int
 );
 
 create table users(
     id bigserial primary key,
     login text,
-    password_hash bytea, 
-    token text,
-    mail text,
-    roleID int references roles(id)
+    role_id int references roles(id),
+    password text
 );
