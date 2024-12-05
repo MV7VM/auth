@@ -18,6 +18,8 @@ ENV APP_HOME="/app"
 WORKDIR $APP_HOME
 
 COPY --from=builder $APP_HOME/main $APP_HOME/main
+COPY --from=builder $APP_HOME/config $APP_HOME/config
+
 
 EXPOSE 3000
 EXPOSE 5000
