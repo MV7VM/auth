@@ -151,13 +151,13 @@ func (r *Repository) GetUserToken(ctx context.Context, login string, passHash []
 	return token, nil
 }
 
-const queryCreateUser = `insert into users (login, password_hash, roleid, mail) 
-					values ($1, $2, (select id from roles where role = $3), $4)
+const queryCreateUser = `insert into users (login, password, role_id) 
+					values ($1, $2, (select id from roles where role = $3))
 					returning id`
 
 func (r *Repository) CreateUser(ctx context.Context, user *entities.User) (uint64, error) {
 	var id uint64
-	err := r.DB.QueryRow(ctx, queryCreateUser, user.Phone, user.PasswordHash, user.Role, user.Mail).Scan(&id)
+	err := r.DB.QueryRow(ctx, queryCreateUser, user.Phone, user.PasswordHash, user.Role).Scan(&id)
 	if err != nil {
 		r.log.Error("fail to create client", zap.Error(err))
 		return 0, err
@@ -195,34 +195,31 @@ const queryGetUser = `
 SELECT
     users.id,
     users.login,
-    users.password_hash,
-    COALESCE(users.token, '') AS token,
-    users.mail,
+    users.password,
     roles.role
 FROM
     users
 INNER JOIN
-    roles ON users.roleID = roles.id
+    roles ON users.role_id = roles.id
 WHERE
 	users.login = $1;
 `
 
 func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
 	var userID int
-	var login, token, mail, role string
+	var login, role string
 	var passwordHash []byte
 
-	err := r.DB.QueryRow(ctx, queryGetUser, user.Phone).Scan(&userID, &login, &passwordHash, &token, &mail, &role)
+	err := r.DB.QueryRow(ctx, queryGetUser, user.Phone).Scan(&userID, &login, &passwordHash, &role)
 	if err != nil {
 		r.log.Error("fail to select data from users: ", zap.Error(err))
 		return err
 	}
+
 	user.ID = uint64(userID)
-	user.Mail = mail
 	user.Phone = login
 	user.PasswordHash = passwordHash
 	user.Role = role
-	user.Token = token
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"auth/internal/domain/auth/entities"
 	"auth/internal/domain/auth/repository/postgres"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -33,9 +34,13 @@ func NewUsecase(logger *zap.Logger, Repo *postgres.Repository, cfg *config.Confi
 }
 
 func (uc *Usecase) GetUserToken(ctx context.Context, user *entities.User, password string) (string, error) {
-	if user.Phone == "admin" && password == "admin" {
+	if uc.isAdmin(ctx, user, password) {
 		user.Role = adminRole
 	} else {
+		err := uc.client(ctx, user, password)
+		if err != nil {
+			return "", err
+		}
 		user.Role = clientRole
 	}
 
@@ -54,6 +59,68 @@ func (uc *Usecase) GetTime() time.Time {
 
 func (uc *Usecase) Admin() string {
 	return fmt.Sprintf("By admin: time = %s", time.Now().UTC())
+}
+
+func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password string) bool {
+	if user.Phone == adminRole {
+		exist, err := uc.Repo.IsUserExist(ctx, user)
+		if err != nil {
+			uc.log.Error("failed to get user exist", zap.Error(err))
+			return false
+		}
+
+		if exist {
+			err = uc.Repo.GetUser(ctx, user)
+			if err != nil {
+				return false
+			}
+			return user.Role == adminRole && password == string(user.PasswordHash)
+		} else {
+			user.Role = adminRole
+			user.PasswordHash = []byte(password)
+			userID, err := uc.Repo.CreateUser(ctx, user)
+			if err != nil {
+				return false
+			}
+
+			user.ID = userID
+			return true
+		}
+	}
+
+	return false
+}
+
+func (uc *Usecase) client(ctx context.Context, user *entities.User, password string) error {
+	exist, err := uc.Repo.IsUserExist(ctx, user)
+	if err != nil {
+		uc.log.Error("failed to get user exist", zap.Error(err))
+		return err
+	}
+
+	if exist {
+		err := uc.Repo.GetUser(ctx, user)
+		if err != nil {
+			uc.log.Error("failed to get user", zap.Error(err))
+			return err
+		}
+
+		if string(user.PasswordHash) == password {
+			return nil
+		} else {
+			return errors.New("unauthorized")
+		}
+	} else {
+		user.Role = clientRole
+		user.PasswordHash = []byte(password)
+		user.ID, err = uc.Repo.CreateUser(ctx, user)
+		if err != nil {
+			uc.log.Error("failed to create user", zap.Error(err))
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (uc *Usecase) createUserToken(user *entities.User) error {

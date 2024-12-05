@@ -72,7 +72,7 @@ func (s *Server) GetUserToken(ctx *gin.Context) {
 		request.Password,
 	)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, fmt.Sprintf("failed to get token: %v", err))
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("failed to get token: %v", err)})
 		return
 	}
 
