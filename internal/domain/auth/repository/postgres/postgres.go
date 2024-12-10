@@ -121,36 +121,6 @@ func (r *Repository) IsRoleExist(ctx context.Context, role string) (bool, error)
 	return res, nil
 }
 
-const queryGetUserRole = `select role 
-from roles 
-where id = (select roleid 
-            from users 
-            where login = $1 and password_hash = $2)`
-
-func (r *Repository) GetUserRole(ctx context.Context, login string, passwordHash []byte) (string, error) {
-	var role string
-	err := r.DB.QueryRow(ctx, queryGetUserRole, login, passwordHash).Scan(&role)
-	if err != nil {
-		r.log.Error("fail to get user role from DB", zap.Error(err))
-		return "", err
-	}
-	return role, nil
-}
-
-const queryGetUserToken = `SELECT COALESCE(token, '') AS token
-					FROM users
-					WHERE login = $1 and password_hash = $2`
-
-func (r *Repository) GetUserToken(ctx context.Context, login string, passHash []byte) (string, error) {
-	var token string
-	err := r.DB.QueryRow(ctx, queryGetUserToken, login, passHash).Scan(&token)
-	if err != nil {
-		r.log.Error("fail to get user")
-		return "", err
-	}
-	return token, nil
-}
-
 const queryCreateUser = `insert into users (login, password, role_id) 
 					values ($1, $2, (select id from roles where role = $3))
 					returning id`
@@ -166,7 +136,7 @@ func (r *Repository) CreateUser(ctx context.Context, user *entities.User) (uint6
 }
 
 const queryUpdateUserPassword = `update users 
-									set password_hash = $1
+									set password = $1
 									where id = $2`
 
 func (r *Repository) UpdateUserPassword(ctx context.Context, user *entities.User) error {
@@ -178,17 +148,36 @@ func (r *Repository) UpdateUserPassword(ctx context.Context, user *entities.User
 	return nil
 }
 
-const queryUpdateUserToken = `update users
-								set token = $1
-								where login = $2`
+const qGetAllUsers = `
+SELECT
+    users.id,
+    users.login as phone,
+    roles.role
+FROM
+    users
+right join
+    roles ON users.role_id = roles.id
+`
 
-func (r *Repository) UpdateUserToken(ctx context.Context, user *entities.User) error {
-	_, err := r.DB.Exec(ctx, queryUpdateUserToken, user.Token, user.Phone)
+func (r *Repository) GetAllUsers(ctx context.Context) ([]entities.User, error) {
+	rows, err := r.DB.Query(ctx, qGetAllUsers)
 	if err != nil {
-		r.log.Error("fail to exec user token", zap.Error(err))
-		return err
+		return nil, err
 	}
-	return nil
+
+	users := make([]entities.User, 0, 8)
+
+	for rows.Next() {
+		var user entities.User
+		err = rows.Scan(&user.ID, &user.Phone, &user.Role)
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, err
 }
 
 const queryGetUser = `
@@ -199,7 +188,7 @@ SELECT
     roles.role
 FROM
     users
-INNER JOIN
+right join
     roles ON users.role_id = roles.id
 WHERE
 	users.login = $1;
@@ -216,7 +205,7 @@ func (r *Repository) GetUser(ctx context.Context, user *entities.User) error {
 		return err
 	}
 
-	user.ID = uint64(userID)
+	user.ID = userID
 	user.Phone = login
 	user.PasswordHash = passwordHash
 	user.Role = role
@@ -249,11 +238,11 @@ func (r *Repository) GetUserByID(ctx context.Context, user *entities.User) error
 		r.log.Error("fail to select data from users: ", zap.Error(err))
 		return err
 	}
-	user.ID = uint64(userID)
-	user.Mail = mail
+	user.ID = userID
+	//user.Mail = mail
 	user.Phone = login
 	user.PasswordHash = passwordHash
 	user.Role = role
-	user.Token = token
+	//user.Token = token
 	return nil
 }

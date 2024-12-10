@@ -13,4 +13,5 @@ func (s *Server) createController() {
 	authGroup := commonGroup.Group("").Use(s.mdlware.JwtTokenCheck).Use(s.mdlware.RoleMiddleware) //todo middleware
 	authGroup.GET("/get-time", s.Time)
 	authGroup.GET("/admin", s.Amin)
+	authGroup.GET("/users", s.GetAllUsers)
 }

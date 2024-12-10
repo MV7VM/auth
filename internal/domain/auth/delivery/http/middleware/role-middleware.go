@@ -8,6 +8,7 @@ import (
 var permissions = map[string]string{
 	"/api/get-time": "CLIENT",
 	"/api/admin":    "ADMIN",
+	"api/users":     "ADMIN",
 }
 
 func (m *Middleware) RoleMiddleware(c *gin.Context) {

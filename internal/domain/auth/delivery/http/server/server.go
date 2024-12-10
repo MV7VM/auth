@@ -63,7 +63,6 @@ func (s *Server) GetUserToken(ctx *gin.Context) {
 	token, err := s.Usecase.GetUserToken(
 		ctx,
 		convertToUserEntity(
-			"",
 			request.Login,
 			nil,
 			0,
@@ -90,10 +89,19 @@ func (s *Server) Amin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": s.Usecase.Admin()})
 }
 
-func convertToUserEntity(mail, phone string, passwordHash []byte, ID uint64, role string) *entities.User {
+func (s *Server) GetAllUsers(c *gin.Context) {
+	users, err := s.Usecase.GetAllUsers(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": fmt.Sprintf("failed to get all users: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+func convertToUserEntity(phone string, passwordHash []byte, ID uint64, role string) *entities.User {
 	return &entities.User{
-		ID:           ID,
-		Mail:         mail,
+		ID:           int(ID),
 		Phone:        phone,
 		PasswordHash: passwordHash,
 		Role:         role,

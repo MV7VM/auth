@@ -67,6 +67,34 @@ func (uc *Usecase) Admin() string {
 	return fmt.Sprintf("By admin: time = %s", time.Now().UTC())
 }
 
+func (uc *Usecase) ChangePassword(ctx context.Context, user *entities.User) error {
+	err := uc.Repo.UpdateUserPassword(ctx, user)
+	if err != nil {
+		uc.log.Error("failed to change user password", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (uc *Usecase) GetAllUsers(ctx context.Context) ([]entities.User, error) {
+	users, err := uc.Repo.GetAllUsers(ctx)
+	if err != nil {
+		uc.log.Error("failed to get all users", zap.Error(err))
+		return nil, err
+	}
+
+	return users, err
+}
+
+func (uc *Usecase) CreateUser() {
+
+}
+
+func (uc *Usecase) UpdateUser() {
+
+}
+
 func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password string) (bool, error) {
 	if user.Phone == adminRole {
 		exist, err := uc.Repo.IsUserExist(ctx, user)
@@ -80,7 +108,14 @@ func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password st
 			if err != nil {
 				return false, err
 			}
-			return user.Role == adminRole && password == string(user.PasswordHash), common.UserPasswordError
+			if user.Role == adminRole {
+				if password == string(user.PasswordHash) {
+					return true, nil
+				} else {
+					return true, common.UserPasswordError
+				}
+			}
+			return false, nil
 		} else {
 			user.Role = adminRole
 			user.PasswordHash = []byte(password)
@@ -89,7 +124,7 @@ func (uc *Usecase) isAdmin(ctx context.Context, user *entities.User, password st
 				return false, err
 			}
 
-			user.ID = userID
+			user.ID = int(userID)
 			return true, nil
 		}
 	}
